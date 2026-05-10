@@ -1,0 +1,12 @@
+yfinance>=0.2
+pandas
+numpy
+scikit-learn
+xgboost
+tensorflow>=2.15
+fastapi
+uvicorn[standard]
+pydantic>=2
+joblib
+pyarrow
+statsmodels

@@ -1,0 +1,35 @@
+# Data and model artifacts (regenerate locally / on the VM).
+# Use directory-contents pattern (data/*) not directory pattern (data/) so that
+# the !data/.gitkeep re-include works — git can't re-include children of a
+# fully ignored directory.
+data/*
+!data/.gitkeep
+artifacts/*
+!artifacts/.gitkeep
+
+# Temporary processing files (per CLAUDE.md WAT spec)
+.tmp/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets
+.env
+credentials.json
+token.json
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
