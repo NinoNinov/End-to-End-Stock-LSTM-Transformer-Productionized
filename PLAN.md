@@ -517,10 +517,27 @@ This file is the part recruiters actually read. Optimize for clarity over polish
 - Original notebook + .py archived at `research/Deep Learning for Stock Price Prediction with LSTM and Transformers.{ipynb,py}`. **All notebook line refs in this plan (327–437 preprocessing, 1141–1182 transformer model, ~370–410 normalizer leakage, 1634–1636 denormalization bug) now point inside `research/`, not the project root.**
 - `src/config.py` import verified: `TICKERS = ['MSFT', 'SPX']`, MSFT.ticker = `MSFT`, SPX.ticker = `^GSPC`, 15 feature columns, RANDOM_STATE = 42.
 - All Python stubs raise `NotImplementedError("Phase N")` so a future phase that wires them prematurely fails loudly with the right pointer.
-- `requirements.txt` written but **NOT installed** — the spec made install a verification step, not a deliverable. Phase 2 should `pip install -r requirements.txt` in a venv before running anything.
-- `.gitignore` ignores `data/` and `artifacts/` but keeps `.gitkeep` markers so the layout survives a fresh clone.
-- Project is **not yet a git repo** (CLAUDE.md says `Is a git repository: false`). Whoever does `git init` first should commit the scaffolding before Phase 2 starts adding generated data.
+- `.gitignore` initially used the directory pattern `data/` which prevented the `!data/.gitkeep` re-include from working. Fixed to `data/*` + `!data/.gitkeep` (same for `artifacts/`) — the directory-contents pattern is the only form git can re-include from.
 - Workflow markdowns are skeletons with the structure CLAUDE.md WAT spec calls for (Objective, Inputs, Tools, Outputs, Edge cases, Cadence) — to be filled in during their respective phases (2, 5, 7).
+- Git initialized; baseline commit `ad68aeb` (28 files). Identity from global config: `Nino <32340544+NinoNinov@users.noreply.github.com>` (GitHub noreply — clean for public repos).
+
+#### **VENV LOCATION — read this before running ANY tool/script**
+The venv lives at **`C:\venvs\stock-predictor\.venv`**, NOT at `<project_root>/.venv`. We moved it out of iCloud Drive because: (a) iCloud syncs every `.pyc` file (~30k file churn), (b) Files-On-Demand can evict bytes Python needs at runtime, (c) it eats iCloud quota.
+
+**Always invoke Python via the absolute venv path:**
+- Bash: `/c/venvs/stock-predictor/.venv/Scripts/python.exe -m tools.fetch_market_data`
+- PowerShell: `& "C:\venvs\stock-predictor\.venv\Scripts\python.exe" -m tools.fetch_market_data`
+- VS Code: set interpreter to `C:\venvs\stock-predictor\.venv\Scripts\python.exe`
+
+If you're starting a cold session and need to recreate the venv:
+```powershell
+New-Item -ItemType Directory -Force -Path C:\venvs\stock-predictor | Out-Null
+python -m venv C:\venvs\stock-predictor\.venv
+& C:\venvs\stock-predictor\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+#### Python / TF compatibility
+System Python is 3.13.1. TensorFlow only added 3.13 wheels in TF 2.19 (Mar 2025). The pinned `tensorflow>=2.15` resolved to **TF 2.21.0** — fine. If a future cold session uses Python <3.13, the resolver may pick a different TF; this is OK as long as `tensorflow>=2.15` and the model code is version-agnostic (which it should be — Keras 3 API).
 
 ---
 
