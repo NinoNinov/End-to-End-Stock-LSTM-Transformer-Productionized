@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Next-Day Stock Prediction — MSFT & SPX</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --panel-2: #1d222c;
+    --border: #2a3140;
+    --text: #e6e9ef;
+    --muted: #9aa3b2;
+    --accent: #6aa9ff;
+    --good: #4ade80;
+    --bad: #f87171;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  header { padding: 22px 28px; border-bottom: 1px solid var(--border); }
+  header .row { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 20px; }
+  header a.repo { color: var(--accent); font-size: 13px; text-decoration: none; }
+  header a.repo:hover { text-decoration: underline; }
+  header .disclaimer { margin: 6px 0 0; color: var(--muted); font-size: 12px; max-width: 900px; }
+  main { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { background: none; border: 0; color: var(--muted); padding: 10px 18px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 22px; margin-bottom: 22px; }
+  .card h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  .card .card-sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+
+  .bignums { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .bignums { grid-template-columns: 1fr; } }
+  .bignum { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .bignum .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .bignum .value { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bignum .value.up { color: var(--good); }
+  .bignum .value.down { color: var(--bad); }
+  .bignum .sub { color: var(--muted); font-size: 12px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .bignum .arrow { display: inline-block; margin-right: 6px; }
+
+  .meta-line { margin-top: 16px; color: var(--muted); font-size: 13px; }
+  .meta-line strong { color: var(--text); font-weight: 500; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 760px) { .metrics-grid { grid-template-columns: 1fr 1fr; } }
+  .metric { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .metric .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .metric .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .metric .vs { color: var(--muted); font-size: 11px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .honesty { margin-top: 14px; padding: 10px 12px; border-radius: 6px; font-size: 12px; }
+  .honesty.fail { background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.35); color: var(--bad); }
+  .honesty.pass { background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.35); color: var(--good); }
+  .perf-line { margin-top: 12px; color: var(--muted); font-size: 13px; }
+
+  table.history { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+  table.history th, table.history td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+  table.history th { color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+  table.history th:first-child, table.history td:first-child,
+  table.history th:nth-child(2), table.history td:nth-child(2) { text-align: left; }
+  table.history td.up { color: var(--good); }
+  table.history td.down { color: var(--bad); }
+  table.history td.muted { color: var(--muted); }
+  .history-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 13px; background: var(--panel-2); border: 1px dashed var(--border); border-radius: 6px; }
+
+  .chart-wrap { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 14px; }
+  .chart-wrap .chart-title { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .chart svg { width: 100%; height: 160px; display: block; }
+
+  .status-banner { padding: 12px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+  .status-banner.error { background: rgba(248, 113, 113, 0.10); border: 1px solid rgba(248, 113, 113, 0.4); color: var(--bad); }
+  .status-banner.loading { background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
+
+  footer { color: var(--muted); font-size: 11px; padding: 16px 28px 24px; max-width: 1100px; margin: 0 auto; }
+  footer code { background: var(--panel-2); padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <h1>Next-Day Stock Prediction — MSFT &amp; SPX</h1>
+    <a class="repo" href="#" id="repo_link" rel="noopener">repo</a>
+  </div>
+  <p class="disclaimer">Direction and return-% forecast for the next trading session, served from a Transformer trained on 35 years of daily bars. <strong>Informational only — not financial advice.</strong></p>
+</header>
+<main>
+  <div id="banner_slot"></div>
+
+  <div class="tabs" id="tabs" role="tablist"></div>
+
+  <section class="card">
+    <h2 id="prediction_title">Tomorrow's prediction</h2>
+    <p class="card-sub" id="prediction_sub">Loading…</p>
+    <div class="bignums" id="bignums"></div>
+    <div class="meta-line" id="meta_line"></div>
+  </section>
+
+  <section class="card">
+    <h2>Holdout performance (last 252 trading days)</h2>
+    <p class="card-sub" id="holdout_sub">Honest evaluation on data the model never saw during training.</p>
+    <div class="metrics-grid" id="metrics_grid"></div>
+    <div id="honesty_slot"></div>
+    <p class="perf-line" id="perf_line"></p>
+  </section>
+
+  <section class="card">
+    <h2>Recent predictions (last 30 days)</h2>
+    <p class="card-sub">Logged daily by <code style="background:var(--panel-2);padding:1px 4px;border-radius:3px">tools/log_prediction.py</code>. <code style="background:var(--panel-2);padding:1px 4px;border-radius:3px">realized_*</code> columns backfill on the day after each prediction.</p>
+    <div id="history_slot"></div>
+    <div class="chart-wrap" id="chart_wrap" style="display:none">
+      <div class="chart-title">Cumulative correct vs incorrect (last 30)</div>
+      <div class="chart" id="chart_slot"></div>
+    </div>
+  </section>
+</main>
+<footer>
+  Prediction shape and source data refresh on each request. Last cached bar drives <code>predicted_for_date</code>; the API hot-reloads new model artifacts via mtime check. Built as a portfolio piece — see <code>research/</code> in the repo for the LSTM-vs-Transformer scientific origin.
+</footer>
+
+<script>
+"use strict";
+
+const API = {
+  metadata: "/metadata",
+  predict: (k) => `/predict/${encodeURIComponent(k)}`,
+  history: (k) => `/history/${encodeURIComponent(k)}?limit=30`,
+};
+
+const STATE = {
+  metadata: null,
+  active: null, // ticker_key
+  predictions: {},
+  histories: {},
+};
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k === "html") node.innerHTML = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("data-")) node.setAttribute(k, v);
+    else node[k] = v;
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    if (typeof c === "string") node.appendChild(document.createTextNode(c));
+    else node.appendChild(c);
+  }
+  return node;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function fmtPct(v, digits = 2) {
+  if (v == null || !Number.isFinite(Number(v))) return "—";
+  const n = Number(v);
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(digits)}%`;
+}
+
+function fmtNum(v, digits = 2) {
+  if (v == null || !Number.isFinite(Number(v))) return "—";
+  return Number(v).toFixed(digits);
+}
+
+function daysAgo(isoLike) {
+  if (!isoLike) return null;
+  const d = new Date(isoLike);
+  if (Number.isNaN(d.getTime())) return null;
+  const ms = Date.now() - d.getTime();
+  return Math.max(0, Math.floor(ms / 86400000));
+}
+
+function banner(kind, msg) {
+  const slot = document.getElementById("banner_slot");
+  slot.innerHTML = "";
+  if (msg) slot.appendChild(el("div", { class: `status-banner ${kind}`, text: msg }));
+}
+
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) {
+    let detail = `${r.status} ${r.statusText}`;
+    try {
+      const j = await r.json();
+      if (j && j.detail) detail += ` — ${j.detail}`;
+    } catch (_) { /* ignore */ }
+    throw new Error(detail);
+  }
+  return r.json();
+}
+
+function buildTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  const keys = Object.keys(STATE.metadata);
+  keys.forEach((k) => {
+    const m = STATE.metadata[k];
+    const label = `${m.display_name} (${m.ticker_symbol})`;
+    const btn = el("button", { class: "tab", type: "button", role: "tab", text: label, "data-key": k });
+    btn.addEventListener("click", () => setActive(k));
+    tabs.appendChild(btn);
+  });
+}
+
+function setActive(key) {
+  STATE.active = key;
+  document.querySelectorAll(".tab").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-key") === key);
+  });
+  renderActive();
+}
+
+function renderActive() {
+  const key = STATE.active;
+  if (!key || !STATE.metadata) return;
+  renderPrediction(key);
+  renderHoldout(key);
+  renderHistory(key);
+}
+
+function renderPrediction(key) {
+  const pred = STATE.predictions[key];
+  const sub = document.getElementById("prediction_sub");
+  const bignums = document.getElementById("bignums");
+  const metaLine = document.getElementById("meta_line");
+  const title = document.getElementById("prediction_title");
+  const m = STATE.metadata[key];
+  title.textContent = `Tomorrow's prediction — ${m.display_name} (${m.ticker_symbol})`;
+
+  bignums.innerHTML = "";
+  metaLine.innerHTML = "";
+
+  if (pred && pred.__error) {
+    sub.textContent = "";
+    bignums.appendChild(el("div", { class: "status-banner error", text: `Prediction failed: ${pred.__error}` }));
+    return;
+  }
+  if (!pred) {
+    sub.textContent = "Loading prediction…";
+    return;
+  }
+
+  sub.textContent = `Forecast for the next trading session after the last cached bar.`;
+
+  const isUp = pred.direction === "up";
+  const arrow = isUp ? "▲" : "▼";
+  const probPct = (pred.direction_prob * 100).toFixed(2);
+  const expRet = Number(pred.expected_return_pct);
+  const implied = Number(pred.implied_close);
+  const lastClose = Number(pred.last_close);
+  const dollarDelta = implied - lastClose;
+  const dollarDeltaStr = `${dollarDelta >= 0 ? "+" : ""}$${dollarDelta.toFixed(2)}`;
+
+  const cards = [
+    {
+      label: "Direction probability",
+      valueHtml: `<span class="arrow">${arrow}</span>${probPct}% ${isUp ? "up" : "down"}`,
+      cls: isUp ? "up" : "down",
+      sub: `threshold ${(pred.direction_threshold * 100).toFixed(2)}% • raw P(up) = ${probPct}%`,
+    },
+    {
+      label: "Expected return",
+      valueHtml: `${fmtPct(expRet, 2)}`,
+      cls: expRet >= 0 ? "up" : "down",
+      sub: `next-session log/linear return forecast`,
+    },
+    {
+      label: "Implied close",
+      valueHtml: `$${implied.toFixed(2)}`,
+      cls: dollarDelta >= 0 ? "up" : "down",
+      sub: `from last close $${lastClose.toFixed(2)} • ${dollarDeltaStr}`,
+    },
+  ];
+
+  for (const c of cards) {
+    const node = el("div", { class: "bignum" },
+      el("div", { class: "label", text: c.label }),
+      el("div", { class: `value ${c.cls || ""}`, html: c.valueHtml }),
+      el("div", { class: "sub", text: c.sub }),
+    );
+    bignums.appendChild(node);
+  }
+
+  const ago = daysAgo(pred.last_train_date);
+  const agoText = ago == null ? "" : ` (${ago} day${ago === 1 ? "" : "s"} ago)`;
+  metaLine.innerHTML = `Prediction for <strong>${escapeHtml(pred.predicted_for_date)}</strong>` +
+    ` • last bar <strong>${escapeHtml(pred.last_bar_date)}</strong>` +
+    ` • model <strong>${escapeHtml(pred.model_kind)}</strong>` +
+    ` • last trained <strong>${escapeHtml((pred.last_train_date || "—").slice(0, 10))}</strong>${escapeHtml(agoText)}`;
+}
+
+function renderHoldout(key) {
+  const m = STATE.metadata[key];
+  const grid = document.getElementById("metrics_grid");
+  const slot = document.getElementById("honesty_slot");
+  const perfLine = document.getElementById("perf_line");
+  grid.innerHTML = "";
+  slot.innerHTML = "";
+  perfLine.innerHTML = "";
+  if (!m) return;
+
+  const h = m.holdout_metrics || {};
+  const dirAcc = Number(h.direction_accuracy_at_0_5);
+  const naiveAcc = Number(h.naive_always_up_accuracy);
+  const retMae = Number(h.return_mae);
+  const naiveRmse = Number(h.naive_yesterday_return_rmse);
+  const auc = Number(h.direction_auc);
+
+  const items = [
+    {
+      k: "Direction accuracy",
+      v: Number.isFinite(dirAcc) ? `${(dirAcc * 100).toFixed(2)}%` : "—",
+      vs: Number.isFinite(naiveAcc) ? `naive always-up: ${(naiveAcc * 100).toFixed(2)}%` : "",
+    },
+    {
+      k: "Return MAE",
+      v: Number.isFinite(retMae) ? `${(retMae * 100).toFixed(3)}%` : "—",
+      vs: Number.isFinite(naiveRmse) ? `naive yest-return RMSE: ${(naiveRmse * 100).toFixed(3)}%` : "",
+    },
+    {
+      k: "Direction AUC",
+      v: Number.isFinite(auc) ? auc.toFixed(3) : "—",
+      vs: "0.5 = random",
+    },
+  ];
+  for (const it of items) {
+    grid.appendChild(el("div", { class: "metric" },
+      el("div", { class: "k", text: it.k }),
+      el("div", { class: "v", text: it.v }),
+      el("div", { class: "vs", text: it.vs || "" }),
+    ));
+  }
+
+  if (Number.isFinite(dirAcc)) {
+    const pct = (dirAcc * 100).toFixed(1);
+    perfLine.textContent = `Model has been right ${pct}% of the time on the last 252 trading days.`;
+  }
+
+  const gate = m.honesty_gate;
+  if (gate && typeof gate.passes === "boolean") {
+    const delta = Number(gate.delta_pp);
+    const deltaStr = Number.isFinite(delta) ? `${delta >= 0 ? "+" : ""}${delta.toFixed(2)} pp` : "—";
+    const req = Number.isFinite(Number(gate.required_pp)) ? `${Number(gate.required_pp).toFixed(1)} pp` : "3.0 pp";
+    if (gate.passes) {
+      slot.appendChild(el("div", { class: "honesty pass", text:
+        `Honesty gate: PASS — beat naive_always_up by ${deltaStr} (required ≥ ${req}).` }));
+    } else {
+      slot.appendChild(el("div", { class: "honesty fail", text:
+        `Honesty gate: FAIL — delta vs naive_always_up is ${deltaStr} (required ≥ ${req}). ` +
+        `The product ships because the infrastructure is the deliverable; the model has no extractable next-day directional edge on this feature set.` }));
+    }
+  }
+}
+
+function renderHistory(key) {
+  const slot = document.getElementById("history_slot");
+  const chartWrap = document.getElementById("chart_wrap");
+  const chartSlot = document.getElementById("chart_slot");
+  slot.innerHTML = "";
+  chartSlot.innerHTML = "";
+  chartWrap.style.display = "none";
+
+  const rows = STATE.histories[key];
+  if (rows == null) {
+    slot.appendChild(el("div", { class: "history-empty", text: "Loading…" }));
+    return;
+  }
+  if (!Array.isArray(rows) || rows.length === 0) {
+    slot.appendChild(el("div", { class: "history-empty",
+      text: "No logged predictions yet — daily logging starts in Phase 7." }));
+    return;
+  }
+
+  const table = el("table", { class: "history" });
+  const head = el("tr", {},
+    el("th", { text: "Predicted at" }),
+    el("th", { text: "For date" }),
+    el("th", { text: "Dir" }),
+    el("th", { text: "P(up)" }),
+    el("th", { text: "Exp ret" }),
+    el("th", { text: "Realized" }),
+    el("th", { text: "Result" }),
+  );
+  const thead = el("thead", {}, head);
+  table.appendChild(thead);
+
+  const tbody = el("tbody");
+  for (const r of rows) {
+    const dir = String(r.direction || "");
+    const dirCls = dir === "up" ? "up" : dir === "down" ? "down" : "muted";
+    const realized = r.realized_return_pct;
+    const realizedStr = realized == null ? "—" : fmtPct(Number(realized), 2);
+    const wasCorrect = r.was_correct;
+    let resultStr = "—", resultCls = "muted";
+    if (wasCorrect === true || wasCorrect === 1) { resultStr = "✓"; resultCls = "up"; }
+    else if (wasCorrect === false || wasCorrect === 0) { resultStr = "✗"; resultCls = "down"; }
+
+    tbody.appendChild(el("tr", {},
+      el("td", { text: r.predicted_at || "—" }),
+      el("td", { text: r.predicted_for_date || "—" }),
+      el("td", { class: dirCls, text: dir || "—" }),
+      el("td", { text: r.direction_prob == null ? "—" : Number(r.direction_prob).toFixed(3) }),
+      el("td", { text: r.expected_return_pct == null ? "—" : fmtPct(Number(r.expected_return_pct), 2) }),
+      el("td", { text: realizedStr }),
+      el("td", { class: resultCls, text: resultStr }),
+    ));
+  }
+  table.appendChild(tbody);
+  slot.appendChild(table);
+
+  drawCumulativeChart(rows, chartSlot, chartWrap);
+}
+
+function drawCumulativeChart(rows, slot, wrap) {
+  // Order oldest-first for cumulative plot.
+  const ordered = rows.slice().reverse();
+  let cumCorrect = 0, cumWrong = 0;
+  const points = [];
+  for (const r of ordered) {
+    const w = r.was_correct;
+    if (w === true || w === 1) cumCorrect += 1;
+    else if (w === false || w === 0) cumWrong += 1;
+    points.push({ correct: cumCorrect, wrong: cumWrong });
+  }
+  if (points.length === 0 || (cumCorrect === 0 && cumWrong === 0)) {
+    // No resolved predictions yet — keep chart hidden.
+    return;
+  }
+  wrap.style.display = "";
+
+  const W = 700, H = 160, padL = 32, padR = 12, padT = 12, padB = 22;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const n = points.length;
+  const maxY = Math.max(1, ...points.map(p => Math.max(p.correct, p.wrong)));
+  const xAt = (i) => padL + (n <= 1 ? innerW / 2 : (innerW * i) / (n - 1));
+  const yAt = (v) => padT + innerH - (innerH * v) / maxY;
+
+  const path = (pts, getter) =>
+    pts.map((p, i) => `${i === 0 ? "M" : "L"}${xAt(i).toFixed(1)},${yAt(getter(p)).toFixed(1)}`).join(" ");
+
+  const correctPath = path(points, p => p.correct);
+  const wrongPath = path(points, p => p.wrong);
+
+  // y-axis grid lines (0, mid, max)
+  const ticks = [0, Math.floor(maxY / 2), maxY];
+  const gridLines = ticks.map(t =>
+    `<line x1="${padL}" y1="${yAt(t)}" x2="${W - padR}" y2="${yAt(t)}" stroke="var(--border)" stroke-width="1" />` +
+    `<text x="${padL - 6}" y="${yAt(t) + 3}" fill="var(--muted)" font-size="10" text-anchor="end">${t}</text>`
+  ).join("");
+
+  const svg =
+    `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">` +
+    gridLines +
+    `<path d="${correctPath}" fill="none" stroke="var(--good)" stroke-width="2" />` +
+    `<path d="${wrongPath}" fill="none" stroke="var(--bad)" stroke-width="2" />` +
+    `<text x="${W - padR}" y="${padT + 10}" fill="var(--good)" font-size="11" text-anchor="end">correct ${cumCorrect}</text>` +
+    `<text x="${W - padR}" y="${padT + 24}" fill="var(--bad)" font-size="11" text-anchor="end">wrong ${cumWrong}</text>` +
+    `</svg>`;
+  slot.innerHTML = svg;
+}
+
+async function loadAll() {
+  banner("loading", "Loading…");
+  let meta;
+  try {
+    meta = await fetchJSON(API.metadata);
+  } catch (e) {
+    banner("error", `Failed to load /metadata: ${e.message}. Is the API server running?`);
+    return;
+  }
+  STATE.metadata = meta;
+  banner("loading", "");
+
+  const keys = Object.keys(meta);
+  if (keys.length === 0) {
+    banner("error", "No tickers configured.");
+    return;
+  }
+
+  buildTabs();
+
+  // Fetch predictions + history for every ticker in parallel so tab-switches are instant.
+  await Promise.all(keys.flatMap((k) => [
+    fetchJSON(API.predict(k))
+      .then((p) => { STATE.predictions[k] = p; })
+      .catch((e) => { STATE.predictions[k] = { __error: e.message }; }),
+    fetchJSON(API.history(k))
+      .then((h) => { STATE.histories[k] = Array.isArray(h) ? h : []; })
+      .catch(() => { STATE.histories[k] = []; }),
+  ]));
+
+  setActive(keys[0]);
+}
+
+loadAll();
+</script>
+</body>
+</html>
