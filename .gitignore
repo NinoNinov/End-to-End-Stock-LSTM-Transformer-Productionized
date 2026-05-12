@@ -31,5 +31,8 @@ token.json
 .DS_Store
 Thumbs.db
 
+# Claude Code agent state (local-only)
+.claude/
+
 # Jupyter
 .ipynb_checkpoints/
