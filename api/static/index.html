@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Next-Day Stock Prediction — MSFT & SPX</title>
+<title>End-to-End Stock Prediction (LSTM &amp; Transformer) &mdash; live demo</title>
 <style>
   :root {
     --bg: #0f1115;
@@ -19,13 +19,26 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
-  header { padding: 22px 28px; border-bottom: 1px solid var(--border); }
-  header .row { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-  header h1 { margin: 0; font-size: 20px; }
-  header a.repo { color: var(--accent); font-size: 13px; text-decoration: none; }
-  header a.repo:hover { text-decoration: underline; }
-  header .disclaimer { margin: 6px 0 0; color: var(--muted); font-size: 12px; max-width: 900px; }
-  main { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
+  header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  header .head-text { flex: 1; min-width: 0; }
+  header h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; max-width: 900px; }
+  header .gh { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; text-decoration: none; }
+  header .gh:hover { background: var(--panel-2); border-color: var(--accent); }
+  header .gh svg { fill: currentColor; }
+  main { padding: 24px 32px; max-width: 1100px; margin: 0 auto; }
+
+  details.about { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 22px; margin-bottom: 22px; }
+  details.about summary { cursor: pointer; user-select: none; font-size: 14px; font-weight: 600; color: var(--text); padding: 2px 0; }
+  details.about[open] summary { margin-bottom: 12px; }
+  details.about p { margin: 8px 0; font-size: 13.5px; color: var(--text); line-height: 1.55; max-width: 1000px; }
+  details.about p.muted { color: var(--muted); }
+  details.about a { color: var(--accent); text-decoration: none; }
+  details.about a:hover { text-decoration: underline; }
+  details.about .stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 10px 0; font-size: 13px; color: var(--muted); }
+  details.about .stats b { color: var(--text); font-variant-numeric: tabular-nums; }
+  details.about code { background: var(--panel-2); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+  .disclaimer-note { margin: 16px 0 0; padding: 10px 14px; background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 6px; color: var(--warn); font-size: 12.5px; }
 
   .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
   .tab { background: none; border: 0; color: var(--muted); padding: 10px 18px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
@@ -84,13 +97,34 @@
 </head>
 <body>
 <header>
-  <div class="row">
-    <h1>Next-Day Stock Prediction — MSFT &amp; SPX</h1>
-    <a class="repo" href="#" id="repo_link" rel="noopener">repo</a>
+  <div class="head-text">
+    <h1>End-to-End Stock Prediction (LSTM &amp; Transformer) &mdash; live demo</h1>
+    <p>A research notebook turned into a self-retraining web service. Dual-head Transformer (direction probability + return %) plus an XGBoost baseline, evaluated against a naive_always_up baseline via a pre-declared honesty gate. Trained on ~8,800 daily bars per ticker (35 years of OHLCV) for MSFT and the S&amp;P 500, with daily prediction logging, weekly atomic-swap retraining, and mtime-based hot reload.</p>
   </div>
-  <p class="disclaimer">Direction and return-% forecast for the next trading session, served from a Transformer trained on 35 years of daily bars. <strong>Informational only — not financial advice.</strong></p>
+  <a class="gh" href="https://github.com/NinoNinov/End-to-End-Stock-LSTM-Transformer-Productionized" target="_blank" rel="noopener noreferrer">
+    <svg height="16" width="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+    View on GitHub
+  </a>
 </header>
 <main>
+  <details class="about" open>
+    <summary>About this project</summary>
+    <p>This started as a <b>research notebook</b> comparing LSTM and Transformer architectures on Microsoft stock — a typical "trained a model on stock prices, plotted some charts" Jupyter artifact (preserved verbatim in <code>research/</code>). I then refactored it into a production-shaped commercial demo: a dual-head Transformer (direction probability + return %) and an XGBoost baseline, a FastAPI backend with mtime hot-reload, this static HTML dashboard, daily prediction logging, and a weekly retraining loop that atomically swaps the production artifact via <code>tmp + fsync + os.replace</code>.</p>
+    <p>The notebook had a few classic research-mode shortcuts: a normalizer fit on the full dataset (data leakage), a denormalization bug at lines 1634&ndash;1636, and one ticker only. The production version fixes the leakage (train-only fit, applied to val/test/inference), sidesteps the denormalization bug by predicting <b>return percentage</b> instead of absolute price, and ships <b>two tickers</b> (MSFT + S&amp;P 500) via config blocks. A pre-declared <b>honesty gate</b> in the bake-off says the production model must beat <code>naive_always_up</code> by &ge;3&nbsp;pp on direction accuracy to count as real signal &mdash; neither winner does, on either ticker, and the dashboard shows the failure verdict in red below.</p>
+    <div class="stats">
+      <span>Training bars per ticker: <b>~8,800</b></span>
+      <span>Holdout days: <b>252</b></span>
+      <span>Transformer params: <b>87k</b></span>
+      <span>MSFT dir acc: <b>0.524</b> (naive 0.524)</span>
+      <span>SPX dir acc: <b>0.571</b> (naive 0.571)</span>
+      <span>SPX return MAE: <b>0.59%</b></span>
+      <span>Honesty gate: <b style="color:var(--bad)">FAIL on both</b></span>
+    </div>
+    <p>The point of this project is the <b>productionization</b>, not the predictive accuracy. The model honestly reports it cannot extract next-day directional signal from this feature set; the system around it (fetch &rarr; cache &rarr; train &rarr; bake-off &rarr; promote &rarr; serve &rarr; log &rarr; backfill &rarr; retrain) is real, atomic, idempotent, and would immediately surface any future feature engineering that did move the gate.</p>
+    <p class="muted"><b>Tech stack:</b> TensorFlow / Keras 3 &middot; XGBoost &middot; scikit-learn &middot; FastAPI &middot; pydantic v2 &middot; yfinance &middot; pandas &middot; pyarrow &middot; vanilla HTML/JS (no framework, no CDN). Full source, plans, and journey writeup in the <a href="https://github.com/NinoNinov/End-to-End-Stock-LSTM-Transformer-Productionized" target="_blank" rel="noopener noreferrer">GitHub repository</a> &mdash; see <code>README.md</code>, <code>PLAN.md</code>, <code>LEARNING_NOTES.md</code>, and <code>docs/journey.md</code>.</p>
+    <p class="disclaimer-note"><b>Disclaimer:</b> Predictions are informational only and are not financial advice. The honesty gate explicitly says the directional signal is not extractable from this feature set on a 1-day horizon &mdash; treat displayed predictions accordingly.</p>
+  </details>
+
   <div id="banner_slot"></div>
 
   <div class="tabs" id="tabs" role="tablist"></div>
